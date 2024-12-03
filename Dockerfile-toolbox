@@ -1,0 +1,37 @@
+# Use Ubuntu 22.04 as the base image
+FROM ubuntu:22.04
+
+RUN apt-get update
+RUN apt-get install -y graphviz
+RUN apt-get install -y maude
+RUN apt-get install -y python2
+RUN apt-get install -y python3
+RUN apt-get install -y make
+RUN apt-get install -y openssh-server
+
+# Copy tamain-prover
+COPY ./tamarin-prover /usr/local/bin/tamarin-prover
+
+# Create SSH directory
+RUN mkdir /var/run/sshd
+
+# Set root user password
+RUN echo 'root:tamarin' | chpasswd
+
+# Allow root login with password
+RUN sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# Expose SSH port
+EXPOSE 22
+
+RUN apt-get autoremove -y && apt-get clean
+RUN rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /root
+
+# Start SSH service
+CMD ["/usr/sbin/sshd", "-D"]
+
+# Set the locale
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8

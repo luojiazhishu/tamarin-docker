@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'feature'
 
 jobs:
   push_to_registries:
@@ -24,12 +26,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract version from tag or branch
+        id: extract_tag_or_branch
+        run: |
+            if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+                VERSION=${GITHUB_REF#refs/tags/}
+                echo "VERSION=$VERSION" >> $GITHUB_ENV
+            else
+                COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+                echo "Commit message: $COMMIT_MESSAGE"
+                if [[ "$COMMIT_MESSAGE" =~ \$TAG\$(.+?)\$ ]]; then
+                    TAG=${BASH_REMATCH[1]}
+                    echo "VERSION=$TAG" >> $GITHUB_ENV
+                else
+                    echo "No valid TAG found in commit message."
+                    exit 1
+                fi
+            fi
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
       - name: Run download.sh script
         run: bash scripts/download.sh
-
-      - name: Extract version from tag
-        id: extract_tag
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         run: |
@@ -44,3 +62,9 @@ jobs:
                       -f Dockerfile-ssh .
           docker push ghcr.io/${{ github.repository }}/ssh:${{ env.VERSION }}
           docker push ghcr.io/${{ github.repository }}/ssh:latest
+
+          docker build -t ghcr.io/${{ github.repository }}/toolbox:${{ env.VERSION }} \
+                      -t ghcr.io/${{ github.repository }}/toolbox:latest \
+                      -f Dockerfile-toolbox .
+          docker push ghcr.io/${{ github.repository }}/toolbox:${{ env.VERSION }}
+          docker push ghcr.io/${{ github.repository }}/toolbox:latest
