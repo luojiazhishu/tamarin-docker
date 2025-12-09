@@ -1,13 +1,11 @@
 # Use Ubuntu 22.04 as the base image
 FROM ubuntu:22.04
 
-RUN apt-get update
-RUN apt-get install -y graphviz
-RUN apt-get install -y maude
-RUN apt-get install -y python2
-RUN apt-get install -y python3
-RUN apt-get install -y make
-RUN apt-get install -y openssh-server
+RUN apt-get update && \
+    apt-get install -y graphviz maude python2 python3 \
+    openssh-server make git vim curl wget \
+    && apt-get autoremove -y && apt-get clean && \
+    rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /var/tmp/* 
 
 # Copy tamain-prover
 COPY ./tamarin-prover /usr/local/bin/tamarin-prover
